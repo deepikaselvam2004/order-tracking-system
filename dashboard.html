@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - Order Tracking</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: white;
+      color: black;
+      padding: 30px;
+      border-radius: 12px;
+      width: 400px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      background: #2a5298;
+      color: white;
+    }
+
+    button:hover {
+      background: #1e3c72;
+    }
+
+    .stats {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f3f3f3;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h1>📦 Supply Chain Dashboard</h1>
+
+    <div class="stats">
+      <p>✔ System Active</p>
+      <p>✔ Orders Tracking Enabled</p>
+    </div>
+
+    <button onclick="goOrders()">📦 Manage Orders</button>
+    <button onclick="logout()">🚪 Logout</button>
+  </div>
+
+  <script>
+    function goOrders() {
+      window.location.href = "orders.html";
+    }
+
+    function logout() {
+      alert("Logged out successfully");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

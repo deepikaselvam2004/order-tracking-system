@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orders Management</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  min-height: 100vh;
+}
+
+/* NAV */
+.nav {
+  background: rgba(0,0,0,0.3);
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+}
+.nav h3 { font-size: 1.15rem; font-weight: 700; }
+.nav-btn {
+  padding: 7px 16px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.25); }
+
+.container { padding: 20px 24px; }
+.row { display: flex; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  flex: 1;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+}
+
+/* CARDS */
+.card { min-width: 150px; max-width: 200px; flex: 1; padding: 18px 20px; }
+.card-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #777; margin-bottom: 8px; }
+.card-num   { font-size: 2.4rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.card-sub   { font-size: 0.72rem; color: #aaa; }
+.card-total     { border-top: 4px solid #2a5298; } .card-total .card-num     { color: #2a5298; }
+.card-pending   { border-top: 4px solid #f39c12; } .card-pending .card-num   { color: #f39c12; }
+.card-shipped   { border-top: 4px solid #3498db; } .card-shipped .card-num   { color: #3498db; }
+.card-delivered { border-top: 4px solid #27ae60; } .card-delivered .card-num { color: #27ae60; }
+.card-delayed   { border-top: 4px solid #e74c3c; } .card-delayed .card-num   { color: #e74c3c; }
+
+/* ══════════════════════════════════
+   ADD ORDER FORM — CENTERED
+══════════════════════════════════ */
+.form-center-wrap {
+  display: flex;
+  justify-content: center;   /* centers horizontally */
+  margin-bottom: 18px;
+}
+.form-box {
+  background: #fff;
+  padding: 28px 32px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  width: 100%;
+  max-width: 480px;          /* nice wide centered card */
+}
+.form-box h3 {
+  margin-bottom: 18px;
+  color: #2a5298;
+  font-size: 1.1rem;
+  text-align: center;
+}
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+.form-row .form-group { flex: 1; }
+
+.form-group { margin-bottom: 10px; }
+.form-group label { font-size: 0.78rem; color: #666; margin-bottom: 3px; display: block; }
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 7px;
+  border: 1.5px solid #ddd;
+  font-size: 0.9rem;
+  color: #333;
+  background: #fff;
+}
+.form-group input:focus,
+.form-group select:focus { border-color: #2a5298; outline: none; }
+.field-error { border-color: #e74c3c !important; background: #fff5f5 !important; }
+
+.btn-add {
+  width: 100%; padding: 12px;
+  background: #2a5298; color: white;
+  border: none; border-radius: 7px;
+  cursor: pointer; font-size: 1rem;
+  font-weight: 600; margin-top: 6px;
+  transition: background 0.2s;
+}
+.btn-add:hover { background: #1a306e; }
+.btn-add:disabled { background: #aaa; cursor: not-allowed; }
+
+/* ANALYTICS TOGGLE */
+.analytics-toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.12);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+.analytics-toggle-bar:hover { background: rgba(255,255,255,0.2); }
+.analytics-toggle-bar .left { display: flex; align-items: center; gap: 12px; }
+.analytics-toggle-bar .left span { font-size: 1.5rem; }
+.analytics-toggle-bar .title { color: white; font-size: 1rem; font-weight: 700; }
+.analytics-toggle-bar .subtitle { color: rgba(255,255,255,0.65); font-size: 0.78rem; margin-top: 2px; }
+.analytics-toggle-bar .arrow { color: white; font-size: 1.4rem; transition: transform 0.3s ease; display: inline-block; }
+.analytics-toggle-bar.open .arrow { transform: rotate(180deg); }
+
+/* ANALYTICS SLIDE SECTION */
+.analytics-section {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.45s ease, opacity 0.35s ease, margin-bottom 0.3s ease;
+  opacity: 0;
+  margin-bottom: 0;
+}
+.analytics-section.open { max-height: 700px; opacity: 1; margin-bottom: 18px; }
+
+/* CHART BOXES */
+.chart-box { min-width: 260px; display: flex; flex-direction: column; }
+.chart-box h3 { margin-bottom: 4px; color: #2a5298; font-size: 1rem; }
+.chart-subtitle { font-size: 0.75rem; color: #888; margin-bottom: 10px; }
+.chart-wrap { width: 100%; height: 270px; position: relative; }
+
+/* TABLE */
+.table-box { min-width: 100%; }
+.table-box h3 { margin-bottom: 12px; color: #2a5298; font-size: 1rem; }
+.search-bar {
+  width: 100%; padding: 9px 14px; margin-bottom: 12px;
+  border-radius: 7px; border: 1.5px solid #ddd; font-size: 0.9rem;
+}
+.search-bar:focus { border-color: #2a5298; outline: none; }
+table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+th, td { padding: 9px 10px; border: 1px solid #eee; text-align: center; }
+th { background: #2a5298; color: white; font-weight: 600; font-size: 0.82rem; }
+tr:nth-child(even) { background: #f8f9fc; }
+tr:hover { background: #edf2ff; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; }
+.b-Pending   { background: #fff3cd; color: #856404; }
+.b-Shipped   { background: #cfe2ff; color: #084298; }
+.b-Delivered { background: #d1e7dd; color: #0a3622; }
+.b-delayed   { background: #f8d7da; color: #842029; }
+.b-ontime    { background: #d1e7dd; color: #0a3622; }
+
+.status-select {
+  padding: 4px 8px; border-radius: 5px;
+  border: 1.5px solid #2a5298; font-size: 0.8rem;
+  background: white; color: #2a5298; font-weight: 600; cursor: pointer;
+}
+.btn-save {
+  padding: 4px 10px; background: #27ae60; color: white;
+  border: none; border-radius: 5px; cursor: pointer;
+  font-size: 0.78rem; font-weight: 600; margin-left: 4px;
+}
+.btn-save:hover { background: #1e8449; }
+.btn-del {
+  padding: 5px 12px; background: #e74c3c; color: white;
+  border: none; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+}
+.btn-del:hover { background: #c0392b; }
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  padding: 12px 20px; border-radius: 8px; font-size: 0.88rem;
+  font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  display: none; z-index: 999;
+}
+.toast.success { background: #27ae60; color: white; }
+.toast.error   { background: #e74c3c; color: white; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h3>📦 Orders Management</h3>
+  <button class="nav-btn" onclick="window.location.href='dashboard.html'">⬅ Dashboard</button>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY CARDS -->
+  <div class="row">
+    <div class="box card card-total">
+      <div class="card-label">Total Orders</div>
+      <div class="card-num" id="totalOrders">0</div>
+      <div class="card-sub">All orders in system</div>
+    </div>
+    <div class="box card card-pending">
+      <div class="card-label">Pending</div>
+      <div class="card-num" id="pendingCount">0</div>
+      <div class="card-sub">Awaiting processing</div>
+    </div>
+    <div class="box card card-shipped">
+      <div class="card-label">Shipped</div>
+      <div class="card-num" id="shippedCount">0</div>
+      <div class="card-sub">On the way</div>
+    </div>
+    <div class="box card card-delivered">
+      <div class="card-label">Delivered</div>
+      <div class="card-num" id="deliveredCount">0</div>
+      <div class="card-sub">Successfully delivered</div>
+    </div>
+    <div class="box card card-delayed">
+      <div class="card-label">⚠ Delayed</div>
+      <div class="card-num" id="delayedCount">0</div>
+      <div class="card-sub" style="color:#e74c3c;">Past due &amp; not delivered</div>
+    </div>
+  </div>
+
+  <!-- ADD ORDER FORM — CENTERED -->
+  <div class="form-center-wrap">
+    <div class="form-box">
+      <h3>➕ Add New Order</h3>
+
+      <!-- Row 1: Customer ID + Customer Name side by side -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Customer ID</label>
+          <input type="text" id="f_cust_id" placeholder="e.g. 1001" autocomplete="off"/>
+        </div>
+        <div class="form-group">
+          <label>Customer Name</label>
+          <input type="text" id="f_cust_name" placeholder="Full name" autocomplete="off"/>
+        </div>
+      </div>
+
+      <!-- Row 2: Product + Status side by side -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Product</label>
+          <select id="f_product">
+            <option value="">-- Select --</option>
+            <option value="Laptop">Laptop</option>
+            <option value="Mobile">Mobile</option>
+            <option value="Tablet">Tablet</option>
+            <option value="Television">Television</option>
+            <option value="Camera">Camera</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f_status">
+            <option value="">-- Select --</option>
+            <option value="Pending">Pending</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 3: Dates side by side -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Order Date</label>
+          <input type="date" id="f_order_date"/>
+        </div>
+        <div class="form-group">
+          <label>Delivery Date</label>
+          <input type="date" id="f_delivery_date"/>
+        </div>
+      </div>
+
+      <div id="formError" style="display:none;color:#e74c3c;font-size:0.82rem;padding:4px 0;font-weight:600;text-align:center;"></div>
+      <button class="btn-add" id="btnAdd" onclick="addOrder()">✚ Add Order</button>
+    </div>
+  </div>
+
+  <!-- ANALYTICS TOGGLE BUTTON -->
+  <div class="analytics-toggle-bar" id="analyticsToggle" onclick="toggleAnalytics()">
+    <div class="left">
+      <span>📊</span>
+      <div>
+        <div class="title">View Analytics Charts</div>
+        <div class="subtitle">Pie — product % share &nbsp;|&nbsp; Bar — order status breakdown</div>
+      </div>
+    </div>
+    <span class="arrow" id="toggleArrow">▼</span>
+  </div>
+
+  <!-- ANALYTICS SECTION (slides open on click) -->
+  <div class="analytics-section" id="analyticsSection">
+    <div class="row">
+      <div class="box chart-box">
+        <h3>🥧 Product Share</h3>
+        <div class="chart-subtitle">Which product has the highest % of total orders</div>
+        <div class="chart-wrap" id="pieWrap">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+      <div class="box chart-box">
+        <h3>📊 Order Status Breakdown</h3>
+        <div class="chart-subtitle">Count of Pending / Shipped / Delivered orders</div>
+        <div class="chart-wrap" id="barWrap">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="box table-box">
+    <h3>📋 Orders List</h3>
+    <input class="search-bar" id="searchInput"
+      placeholder="🔍 Search by ID / Customer / Product"
+      oninput="filterTable()"/>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Cust ID</th><th>Name</th><th>Product</th>
+          <th>Status</th><th>Delay</th><th>Order Date</th>
+          <th>Delivery Date</th><th>Change Status</th><th>Delete</th>
+        </tr>
+      </thead>
+      <tbody id="tableData"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API     = "http://localhost:3000";
+let allData   = [];
+let pieInst   = null;
+let barInst   = null;
+let chartData = null;
+let analyticsOpen = false;
+
+/* TOGGLE ANALYTICS */
+function toggleAnalytics() {
+  analyticsOpen = !analyticsOpen;
+  const section = document.getElementById("analyticsSection");
+  const toggle  = document.getElementById("analyticsToggle");
+  const arrow   = document.getElementById("toggleArrow");
+  if (analyticsOpen) {
+    section.classList.add("open");
+    toggle.classList.add("open");
+    arrow.textContent = "▲";
+    setTimeout(function() { if (chartData) buildCharts(chartData); }, 460);
+  } else {
+    section.classList.remove("open");
+    toggle.classList.remove("open");
+    arrow.textContent = "▼";
+  }
+}
+
+/* LOAD ORDERS */
+async function loadOrders() {
+  try {
+    const res  = await fetch(API + "/orders");
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allData    = data;
+    renderTable(data);
+  } catch (e) {
+    showToast("❌ Server not running! Run: node server.js", "error");
+    document.getElementById("btnAdd").disabled = true;
+  }
+}
+
+/* RENDER TABLE */
+function renderTable(data) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  let pending=0, shipped=0, delivered=0, delayed=0;
+  const productCount = {};
+  let rows = "";
+
+  data.forEach(function(o) {
+    const s = (o.status || "").trim();
+    if      (s === "Pending")   pending++;
+    else if (s === "Shipped")   shipped++;
+    else if (s === "Delivered") delivered++;
+
+    let isDelayed = false;
+    if (s !== "Delivered" && o.delivery_date) {
+      const dd = new Date(o.delivery_date);
+      dd.setHours(0,0,0,0);
+      if (dd < today) { isDelayed = true; delayed++; }
+    }
+
+    const prod = (o.product_name || "").trim();
+    if (prod && prod !== "Select Product" && prod !== "-- Select Product --") {
+      productCount[prod] = (productCount[prod] || 0) + 1;
+    }
+
+    const oDate = o.order_date    ? new Date(o.order_date).toLocaleDateString("en-IN")    : "—";
+    const dDate = o.delivery_date ? new Date(o.delivery_date).toLocaleDateString("en-IN") : "—";
+
+    const statusBadge = '<span class="badge b-' + s + '">' + (s || "—") + '</span>';
+    const delayBadge  = isDelayed
+      ? '<span class="badge b-delayed">⚠ Delayed</span>'
+      : '<span class="badge b-ontime">✔ On Time</span>';
+
+    const dropdown =
+      '<select class="status-select" id="sel-' + o.id + '">' +
+        '<option value="Pending"'   + (s==="Pending"   ?" selected":"") + '>Pending</option>'   +
+        '<option value="Shipped"'   + (s==="Shipped"   ?" selected":"") + '>Shipped</option>'   +
+        '<option value="Delivered"' + (s==="Delivered" ?" selected":"") + '>Delivered</option>' +
+      '</select>' +
+      '<button class="btn-save" onclick="updateStatus(' + o.id + ')">💾 Save</button>';
+
+    rows +=
+      '<tr>' +
+        '<td>' + o.id + '</td>' +
+        '<td>' + (o.customer_id   ||"—") + '</td>' +
+        '<td>' + (o.customer_name ||"—") + '</td>' +
+        '<td>' + (prod            ||"—") + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td>' + delayBadge  + '</td>' +
+        '<td>' + oDate + '</td>' +
+        '<td>' + dDate + '</td>' +
+        '<td style="white-space:nowrap">' + dropdown + '</td>' +
+        '<td><button class="btn-del" onclick="deleteOrder(' + o.id + ')">🗑 Delete</button></td>' +
+      '</tr>';
+  });
+
+  document.getElementById("tableData").innerHTML = rows ||
+    '<tr><td colspan="10" style="color:#aaa;padding:20px;text-align:center;">No orders yet. Add your first order above!</td></tr>';
+
+  document.getElementById("totalOrders").innerText    = data.length;
+  document.getElementById("pendingCount").innerText   = pending;
+  document.getElementById("shippedCount").innerText   = shipped;
+  document.getElementById("deliveredCount").innerText = delivered;
+  document.getElementById("delayedCount").innerText   = delayed;
+
+  chartData = {
+    productCount: productCount,
+    statusCount:  { Pending: pending, Shipped: shipped, Delivered: delivered }
+  };
+
+  if (analyticsOpen) {
+    setTimeout(function() { buildCharts(chartData); }, 200);
+  }
+}
+
+/* SEARCH */
+function filterTable() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  renderTable(allData.filter(function(o) {
+    return String(o.id).includes(q) ||
+      (o.customer_name||"").toLowerCase().includes(q) ||
+      (o.product_name ||"").toLowerCase().includes(q) ||
+      String(o.customer_id||"").toLowerCase().includes(q);
+  }));
+}
+
+/* ADD ORDER */
+async function addOrder() {
+  const cust_id       = document.getElementById("f_cust_id").value.trim();
+  const cust_name     = document.getElementById("f_cust_name").value.trim();
+  const product_name  = document.getElementById("f_product").value;
+  const status        = document.getElementById("f_status").value;
+  const order_date    = document.getElementById("f_order_date").value;
+  const delivery_date = document.getElementById("f_delivery_date").value;
+
+  ["f_cust_id","f_cust_name","f_product","f_status"].forEach(function(id) {
+    document.getElementById(id).classList.remove("field-error");
+  });
+  document.getElementById("formError").style.display = "none";
+
+  let err = "";
+  if      (!cust_id)      { document.getElementById("f_cust_id").classList.add("field-error");  err = "⚠ Customer ID is required";  }
+  else if (!cust_name)    { document.getElementById("f_cust_name").classList.add("field-error"); err = "⚠ Customer Name is required"; }
+  else if (!product_name) { document.getElementById("f_product").classList.add("field-error");   err = "⚠ Please select a Product";   }
+  else if (!status)       { document.getElementById("f_status").classList.add("field-error");    err = "⚠ Please select a Status";    }
+
+  if (err) {
+    const d = document.getElementById("formError");
+    d.textContent = err; d.style.display = "block"; return;
+  }
+
+  const btn = document.getElementById("btnAdd");
+  btn.disabled = true; btn.textContent = "⏳ Saving...";
+
+  try {
+    const res = await fetch(API + "/add-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_id:   cust_id,
+        customer_name: cust_name,
+        product_name:  product_name,
+        status:        status,
+        order_date:    order_date    || null,
+        delivery_date: delivery_date || null
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    document.getElementById("f_cust_id").value         = "";
+    document.getElementById("f_cust_name").value       = "";
+    document.getElementById("f_product").selectedIndex = 0;
+    document.getElementById("f_status").selectedIndex  = 0;
+    document.getElementById("f_order_date").value      = "";
+    document.getElementById("f_delivery_date").value   = "";
+
+    showToast("✅ Order added successfully!", "success");
+    loadOrders();
+  } catch (e) {
+    showToast("❌ Failed: " + e.message, "error");
+  } finally {
+    btn.disabled = false; btn.textContent = "✚ Add Order";
+  }
+}
+
+/* UPDATE STATUS */
+async function updateStatus(id) {
+  const sel = document.getElementById("sel-" + id);
+  if (!sel) return;
+  try {
+    const res = await fetch(API + "/update-order/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: sel.value })
+    });
+    if (!res.ok) throw new Error();
+    showToast('✅ Order #' + id + ' → "' + sel.value + '"', "success");
+    loadOrders();
+  } catch (e) {
+    showToast("❌ Update failed.", "error");
+  }
+}
+
+/* DELETE */
+async function deleteOrder(id) {
+  if (!confirm("Delete order #" + id + "?")) return;
+  try {
+    await fetch(API + "/delete-order/" + id, { method: "DELETE" });
+    showToast("🗑️ Order #" + id + " deleted", "success");
+    loadOrders();
+  } catch (e) {
+    showToast("❌ Delete failed.", "error");
+  }
+}
+
+/* BUILD CHARTS */
+function buildCharts(data) {
+  if (!data) return;
+  const prodLabels = Object.keys(data.productCount);
+  const prodValues = Object.values(data.productCount);
+  const COLORS = ["#ff6384","#36a2eb","#ffce56","#4bc0c0","#9966ff","#ff9f40"];
+
+  if (pieInst) { pieInst.destroy(); pieInst = null; }
+  if (barInst) { barInst.destroy(); barInst = null; }
+
+  const pieWrap = document.getElementById("pieWrap");
+  const barWrap = document.getElementById("barWrap");
+  const pw = pieWrap.clientWidth || 400;
+  const bw = barWrap.clientWidth || 400;
+  const ch = 260;
+
+  pieWrap.innerHTML = "";
+  const pc = document.createElement("canvas");
+  pc.id = "pieChart"; pc.width = pw; pc.height = ch;
+  pieWrap.appendChild(pc);
+
+  barWrap.innerHTML = "";
+  const bc = document.createElement("canvas");
+  bc.id = "barChart"; bc.width = bw; bc.height = ch;
+  barWrap.appendChild(bc);
+
+  if (prodLabels.length === 0) {
+    pieWrap.innerHTML = '<div style="height:260px;display:flex;align-items:center;justify-content:center;color:#bbb;flex-direction:column;gap:8px;"><span style="font-size:2rem;">📊</span><span>Add orders to see chart</span></div>';
+  } else {
+    const total = prodValues.reduce(function(a,b){return a+b;},0);
+    pieInst = new Chart(pc, {
+      type: "pie",
+      data: {
+        labels: prodLabels,
+        datasets: [{ data: prodValues, backgroundColor: COLORS.slice(0,prodLabels.length), borderWidth:2, borderColor:"#fff" }]
+      },
+      options: {
+        responsive: false, maintainAspectRatio: false, animation: { duration: 700 },
+        plugins: {
+          legend: { position:"bottom", labels:{ boxWidth:12, font:{size:11}, padding:10 } },
+          tooltip: {
+            callbacks: {
+              label: function(c) {
+                const pct = ((c.parsed/total)*100).toFixed(1);
+                return " " + c.label + ": " + c.parsed + " orders (" + pct + "%)";
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  barInst = new Chart(bc, {
+    type: "bar",
+    data: {
+      labels: ["Pending","Shipped","Delivered"],
+      datasets: [{
+        label: "Orders",
+        data: [data.statusCount.Pending, data.statusCount.Shipped, data.statusCount.Delivered],
+        backgroundColor: ["#f39c12","#3498db","#27ae60"],
+        borderRadius: 8, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: false, maintainAspectRatio: false, animation: { duration: 700 },
+      plugins: {
+        legend: { display:false },
+        tooltip: { callbacks: { label: function(c){ return " " + c.label + ": " + c.parsed + " orders"; } } }
+      },
+      scales: {
+        y: { beginAtZero:true, ticks:{stepSize:1}, grid:{color:"#f0f0f0"} },
+        x: { grid:{display:false} }
+      }
+    }
+  });
+}
+
+/* TOAST */
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className   = "toast " + (type || "success");
+  t.style.display = "block";
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.style.display="none"; }, 3500);
+}
+
+window.addEventListener("load", function(){ loadOrders(); });
+</script>
+</body>
+</html>
