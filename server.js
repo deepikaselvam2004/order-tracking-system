@@ -7,20 +7,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* ✅ Serve HTML files from same folder — needed for Render */
+/* ✅ Serve HTML files */
 app.use(express.static(__dirname));
 
 /* ══════════════════════════════════════
    DATABASE CONNECTION
-   Local PC  → uses your MySQL values below
-   Render    → uses environment variables
+
+   HOW THIS WORKS:
+   - On your LOCAL PC:
+     MYSQLHOST is not set → uses "localhost"
+     MYSQLUSER is not set → uses "root"
+     MYSQLPASSWORD is not set → uses "Deepika@2004"
+     MYSQLDATABASE is not set → uses "order_tracking"
+
+   - On RENDER (online):
+     Railway variables are set → uses Railway MySQL
+     Everything connects automatically!
 ══════════════════════════════════════ */
 const db = mysql.createConnection({
-  host     : process.env.DB_HOST     || "localhost",
-  user     : process.env.DB_USER     || "root",
-  password : process.env.DB_PASSWORD || "Deepika@2004",
-  database : process.env.DB_NAME     || "order_tracking",
-  port     : process.env.DB_PORT     || 3306
+  host     : process.env.MYSQLHOST     || "localhost",
+  user     : process.env.MYSQLUSER     || "root",
+  password : process.env.MYSQLPASSWORD || "Deepika@2004",
+  database : process.env.MYSQLDATABASE || "order_tracking",
+  port     : process.env.MYSQLPORT     || 3306
 });
 
 db.connect(function(err) {
@@ -107,8 +116,8 @@ app.put("/update-order/:id", function(req, res) {
 
 /* ══════════════════════════════════════
    SERVER START
-   Local → port 3000
-   Render → port from environment
+   Local PC → port 3000
+   Render   → Railway sets PORT automatically
 ══════════════════════════════════════ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
